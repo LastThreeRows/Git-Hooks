@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# @auth 后三排
+# @site https://housanpai.com
+
+# 错误消息内容
+IS_ERROR_MESSAGE=()
+
+while read st file
+do
+
+    # 文件状态为 D 时跳出本次循环
+    if [ 'D' == "$st" ]
+    then
+        echo $file
+        continue
+    fi
+
+    # 文件末为不是 .php 时输出文件，并跳出本次循环
+    if [[ ! "$file"  =~ (\.php$) ]]
+    then
+        echo $file
+        continue
+    fi
+    
+    PHP_LINT=`php -l $file`
+
+    # 本文件不存在语法错误，输出结果，并跳出本次循环
+    if [ 0 -eq $? ]
+    then
+        echo $PHP_LINT
+        continue
+    fi
+
+    # 统计错误消息内容的数据个数
+    ERROR_COUNT=${#IS_ERROR_MESSAGE[@]}
+
+    # 将错误的存放到数组里面
+    IS_ERROR_MESSAGE[${ERROR_COUNT}]=$PHP_LINT
+
+done <<EOF
+`git diff --cached --name-status`
+EOF
+
+if [ -n "${IS_ERROR_MESSAGE}" ]
+then
+
+    # 循环输出错误消息，并且指定文字颜色为红色
+    for ((i=0;i<${#IS_ERROR_MESSAGE[@]};i++))
+    do
+        echo -e "\033[31m ${IS_ERROR_MESSAGE[$i]} \033[0m"
+    done
+
+    exit 1
+
+fi
+
+exit 0
+
